@@ -77,17 +77,11 @@ impl<F: Field> FieldChip<F> {
 
             // The polynomial expressions returned from `create_gate` will be
             // constrained by the proving system to equal zero.
-            // 1. out is Bool.
-            // 2. out is 1, then `input == 0`.
-            // 3. out is 0, then `input != 0`.
-            // 4. when `input != 0` check `inverse = input.invert()`
             vec![
-                is_zero.clone() * out.clone() * (Expression::Constant(F::ONE) - out.clone()),
-                is_zero.clone() * out.clone() * input.clone(),
                 is_zero.clone()
-                    * (Expression::Constant(F::ONE) - out)
+                    * input.clone()
                     * (Expression::Constant(F::ONE) - input.clone() * invert.clone()),
-                is_zero * input.clone() * (Expression::Constant(F::ONE) - input * invert),
+                is_zero * (Expression::Constant(F::ONE) - input * invert - out),
             ]
         });
 
@@ -247,6 +241,14 @@ fn main() {
         a: Value::known(Fp::ZERO),
     };
     let public_inputs = vec![Fp::ZERO];
+    let prover = MockProver::run(k, &circuit, vec![public_inputs]).unwrap();
+    assert!(prover.verify().is_err());
+
+    // error case 4: (input == 1 and output == 1)
+    let circuit = MyCircuit {
+        a: Value::known(Fp::ONE),
+    };
+    let public_inputs = vec![Fp::ONE];
     let prover = MockProver::run(k, &circuit, vec![public_inputs]).unwrap();
     assert!(prover.verify().is_err());
 }
